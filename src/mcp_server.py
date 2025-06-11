@@ -5,6 +5,15 @@ from config import ARCADE_API_KEY
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import RedirectResponse
+import logging
+import json
+
+# Configuração do logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger('mcp_server')
 
 # Cria a aplicação FastAPI
 app = FastAPI()
@@ -136,6 +145,9 @@ async def mcp_endpoint(request: Request):
         tool_name = data.get("params", {}).get("name")
         arguments = data.get("params", {}).get("arguments", {})
         
+        # Log dos argumentos recebidos
+        logger.info(f"Tool '{tool_name}' called with arguments: {json.dumps(arguments, indent=2)}")
+        
         if tool_name not in tools:
             return JSONResponse(content={
                 "id": request_id,
@@ -172,6 +184,9 @@ async def mcp_endpoint(request: Request):
                 arguments = clean_args
             
             result = await tool.arun(arguments)
+            
+            # Log do resultado obtido
+            logger.info(f"Tool '{tool_name}' returned result: {json.dumps(result, indent=2) if result else 'None'}")
             
             # Se result for None, criar estrutura padrão
             if result is None:
