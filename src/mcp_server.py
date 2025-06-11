@@ -172,11 +172,25 @@ async def mcp_endpoint(request: Request):
                 arguments = clean_args
             
             result = await tool.arun(arguments)
+            
+            # Se result for None, criar estrutura padrão
+            if result is None:
+                result = {
+                    "markdown": "",
+                    "metadata": {}
+                }
+            # Se result for string, converter para formato estruturado
+            elif isinstance(result, str):
+                result = {
+                    "markdown": result,
+                    "metadata": {}
+                }
+            
             return JSONResponse(content={
                 "id": request_id,
                 "jsonrpc": "2.0",
                 "result": {
-                    "output": result
+                    "structuredContent": result
                 }
             })
         except Exception as e:
