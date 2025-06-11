@@ -190,22 +190,24 @@ async def mcp_endpoint(request: Request):
             
             # Se result for None, criar estrutura padrão
             if result is None:
-                result = {
-                    "markdown": "",
-                    "metadata": {}
-                }
-            # Se result for string, converter para formato estruturado
+                markdown_content = ""
+            # Se result for string, usar direto
             elif isinstance(result, str):
-                result = {
-                    "markdown": result,
-                    "metadata": {}
-                }
+                markdown_content = result
+            # Se for dict com markdown, extrair o markdown
+            elif isinstance(result, dict) and "markdown" in result:
+                markdown_content = result["markdown"]
+            else:
+                markdown_content = str(result)
             
             return JSONResponse(content={
                 "id": request_id,
                 "jsonrpc": "2.0",
                 "result": {
-                    "structuredContent": result
+                    "content": [{
+                        "type": "text",
+                        "text": markdown_content
+                    }]
                 }
             })
         except Exception as e:
