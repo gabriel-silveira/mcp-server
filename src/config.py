@@ -12,3 +12,6 @@ import os
 # API Keys
 ARCADE_API_KEY = os.getenv('ARCADE_API_KEY')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+
+server_name = "OAPV Tools MCP Server"
+server_version = "1.0.0"
