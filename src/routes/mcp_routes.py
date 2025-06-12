@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from fastapi import Request
 from fastapi.responses import JSONResponse
-from src.routes.utils import create_error_response
+from src.utils import create_error_response
 from src.tools import handle_tool_call, tools, ToolCallParams
 from src.logs import mcp_logger
 from src.schemas.mcp_schemas import MCPRequest, MCPErrorCode
