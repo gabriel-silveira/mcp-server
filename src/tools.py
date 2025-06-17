@@ -85,4 +85,3 @@ async def handle_tool_call(request_id: int, tool_name: str, arguments: Dict[str,
     except Exception as e:
         tools_logger.error(f"[{correlation_id}] Error executing tool '{tool_name}': {str(e)}")
         return create_error_response(request_id, MCPErrorCode.INTERNAL_ERROR, str(e))
-
