@@ -1,5 +1,22 @@
+# Environment and Python
 .env
 *.pyc
 __pycache__/
 .venv
 *.egg-info
+
+# Logs e arquivos temporários
+logs/
+run/
+*.log
+*.pid
+
+# IDEs e editores
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema
+.DS_Store
+Thumbs.db
