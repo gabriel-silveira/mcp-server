@@ -250,8 +250,8 @@ sudo tail -f /var/log/nginx/access.log
 ### 8.3. Atualizar a aplicação
 
 ```bash
-cd /var/www/mcp
-sudo -u mcp git pull
+cd /home/ubuntu/mcp
+git pull
 source venv/bin/activate
 uv pip install -e ".[dev]"
 sudo systemctl restart mcp
