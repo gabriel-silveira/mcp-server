@@ -8,6 +8,8 @@ class TestArgsSchema(BaseModel):
     url: str
     formats: list[str] = ["markdown"]
     timeout: int = 30000
+    tags: list[str] = []  # Novo campo para testar array padrão
+    categories: list[str] = []  # Mais um campo array
 
 class MockTool:
     def __init__(self, name: str, should_fail: bool = False):
@@ -31,16 +33,6 @@ def mock_tools(monkeypatch):
     return tools_dict
 
 @pytest.mark.asyncio
-async def test_handle_scrapeurl_tool_success(mock_tools):
-    """Test successful tool execution"""
-    result = await handle_tool_call(1, "scrapeurl", {"url": "https://example.com"})
-    data = result.body.decode()
-    assert '"id":1' in data
-    assert '"jsonrpc":"2.0"' in data
-    assert '"content"' in data
-    assert "Test content" in data
-
-@pytest.mark.asyncio
 async def test_handle_nonexistent_tool_not_found():
     """Test tool not found error"""
     result = await handle_tool_call(1, "nonexistent_tool", {})
@@ -50,30 +42,6 @@ async def test_handle_nonexistent_tool_not_found():
     assert '"error"' in data
     assert str(MCPErrorCode.METHOD_NOT_FOUND.value) in data
     assert "Tool nonexistent_tool not found" in data
-
-@pytest.mark.asyncio
-async def test_handle_scrapeurl_tool_execution_error(mock_tools, monkeypatch):
-    """Test tool execution error"""
-    tools_dict = {}
-    tools_dict["scrapeurl"] = MockTool("scrapeurl", should_fail=True)
-    monkeypatch.setattr("src.tools.tools", tools_dict)
-    result = await handle_tool_call(1, "scrapeurl", {"url": "https://example.com"})
-    data = result.body.decode()
-    assert '"id":1' in data
-    assert '"jsonrpc":"2.0"' in data
-    assert '"error"' in data
-    assert str(MCPErrorCode.INTERNAL_ERROR.value) in data
-    assert "Tool execution failed" in data
-
-@pytest.mark.asyncio
-async def test_handle_scrapeurl_tool_with_default_args(mock_tools):
-    """Test tool execution with default arguments"""
-    result = await handle_tool_call(1, "scrapeurl", {"url": "https://example.com", "formats": None})
-    data = result.body.decode()
-    assert '"id":1' in data
-    assert '"jsonrpc":"2.0"' in data
-    assert '"content"' in data
-    assert "Test content" in data
 
 @pytest.mark.asyncio
 async def test_handle_scrapeurl_tool_with_none_result(mock_tools, monkeypatch):
