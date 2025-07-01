@@ -2,30 +2,13 @@ from fastapi import APIRouter
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from src.utils import create_error_response
-from src.tools import handle_tool_call, tools, ToolCallParams
 from src.logs import mcp_logger
 from src.schemas.mcp_schemas import MCPRequest, MCPErrorCode
-from src.config import server_name, server_version
+from src.services import tools_service
 
 async def mcp_endpoint(request: Request):
     if request.method == "GET":
-        return JSONResponse(content={
-            "id": 0,
-            "jsonrpc": "2.0",
-            "result": {
-                "protocolVersion": "2025-03-26",
-                "capabilities": {
-                    "logging": {},
-                    "prompts": {},
-                    "resources": {},
-                    "tools": {}
-                },
-                "serverInfo": {
-                    "name": server_name,
-                    "version": server_version
-                }
-            }
-        })
+        return JSONResponse(content=tools_service.get_server_info())
     
     try:
         data = await request.json()
@@ -37,61 +20,19 @@ async def mcp_endpoint(request: Request):
         return create_error_response(0, MCPErrorCode.INVALID_REQUEST, str(e))
     
     if method == "initialize":
-        return JSONResponse(content={
-            "id": request_id,
-            "jsonrpc": "2.0",
-            "result": {
-                "protocolVersion": "2025-03-26",
-                "capabilities": {
-                    "logging": {},
-                    "prompts": {},
-                    "resources": {},
-                    "tools": {}
-                },
-                "serverInfo": {
-                    "name": server_name,
-                    "version": server_version
-                }
-            }
-        })
+        return JSONResponse(content=tools_service.get_initialize_response(request_id))
     
     elif method == "notifications/initialized":
         return JSONResponse(
-            content={
-                "id": request_id,
-                "jsonrpc": "2.0",
-                "result": None
-            },
+            content=tools_service.get_initialized_notification_response(request_id),
             status_code=202
         )
     
     elif method == "tools/list":
-        return JSONResponse(content={
-            "id": request_id,
-            "jsonrpc": "2.0",
-            "result": {
-                "tools": [
-                    {
-                        "name": tool_name,
-                        "description": tool.description,
-                        "inputSchema": tool.args_schema.model_json_schema() if hasattr(tool, 'args_schema') else {
-                            "type": "object",
-                            "properties": {},
-                            "required": []
-                        }
-                    }
-                    for tool_name, tool in tools.items()
-                ]
-            }
-        })
+        return JSONResponse(content=tools_service.get_tools_list_response(request_id))
     
     elif method == "tools/call":
-        try:
-            params = ToolCallParams(**mcp_request.params or {})
-            return await handle_tool_call(request_id, params.name, params.arguments)
-        except Exception as e:
-            mcp_logger.error(f"Error processing tool call: {str(e)}")
-            return create_error_response(request_id, MCPErrorCode.INTERNAL_ERROR, str(e))
+        return await tools_service.handle_tool_request(request_id, mcp_request.params)
     
     if method not in ["initialize", "notifications/initialized", "tools/list", "tools/call"]:
         return create_error_response(
