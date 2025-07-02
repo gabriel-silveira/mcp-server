@@ -4,7 +4,7 @@ from pydantic import BaseModel
 from src.tools import handle_tool_call, ToolCallParams, tools
 from src.schemas.mcp_schemas import MCPErrorCode
 
-class TestArgsSchema(BaseModel):
+class MockArgsSchema(BaseModel):
     url: str
     formats: list[str] = ["markdown"]
     timeout: int = 30000
@@ -15,7 +15,7 @@ class MockTool:
     def __init__(self, name: str, should_fail: bool = False):
         self.name = name
         self.should_fail = should_fail
-        self.args_schema = TestArgsSchema
+        self.args_schema = MockArgsSchema
 
     async def arun(self, arguments):
         if self.should_fail:
