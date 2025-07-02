@@ -4,10 +4,11 @@ from fastapi import FastAPI
 from src.routes.mcp_routes import mcp_router
 
 # Cria a aplicação FastAPI
-app = FastAPI()
+app = FastAPI(
+    title="MCP Server",
+    description="Servidor MCP de Ferramentas do Arcade",
+    version="1.0.0",
+)
 
 # app.include_router(auth_router)
 app.include_router(mcp_router)
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=2906)

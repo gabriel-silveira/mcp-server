@@ -1,14 +1,14 @@
 """Tests for the ScrapeUrl tool."""
 import pytest
 from unittest.mock import patch
-from src.tools import handle_tool_call
+from src.tools.base import handle_tool_call
 from src.schemas.mcp_schemas import MCPErrorCode
 from tests.conftest import MockTool
 
 @pytest.fixture(autouse=True)
 def mock_tools(mock_tool, monkeypatch):
     """Mock the tools dictionary for testing."""
-    monkeypatch.setattr("src.tools.tools", {"scrapeurl": mock_tool()})
+    monkeypatch.setattr("src.tools.base.tools", {"scrapeurl": mock_tool()})
 
 @pytest.mark.asyncio
 async def test_handle_scrapeurl_tool_success(mock_tools):
@@ -24,7 +24,7 @@ async def test_handle_scrapeurl_tool_success(mock_tools):
 @pytest.mark.asyncio
 async def test_handle_scrapeurl_tool_not_found():
     """Test tool not found error."""
-    with patch("src.tools.tools", {}):
+    with patch("src.tools.base.tools", {}):
         result = await handle_tool_call(1, "nonexistent", {})
         data = result.body.decode()
         
@@ -36,7 +36,7 @@ async def test_handle_scrapeurl_tool_not_found():
 @pytest.mark.asyncio
 async def test_handle_scrapeurl_tool_failure(mock_tools, monkeypatch):
     """Test tool execution failure."""
-    monkeypatch.setattr("src.tools.tools", {"scrapeurl": MockTool("scrapeurl", should_fail=True)})
+    monkeypatch.setattr("src.tools.base.tools", {"scrapeurl": MockTool("scrapeurl", should_fail=True)})
     result = await handle_tool_call(1, "scrapeurl", {"url": "https://example.com"})
     data = result.body.decode()
     

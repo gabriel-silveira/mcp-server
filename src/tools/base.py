@@ -9,6 +9,7 @@ from uuid import uuid4
 from src.utils import create_error_response, create_success_response, MCPErrorCode
 from src.logs import tools_logger
 from src.config import ARCADE_API_KEY
+from src.tools.tools_args import _clean_microsoft_createandsendemail_args, _clean_scrape_args, _clean_default_args
 
 # Request/Response models
 class ToolCallParams(BaseModel):
@@ -23,6 +24,7 @@ manager = ToolManager(
 # Initialize tools
 raw_tools = manager.init_tools(
     tools=["Web.ScrapeUrl"],
+    toolkits=["Microsoft"],
 )
 
 # Map tools by name for easier access
@@ -45,22 +47,20 @@ async def handle_tool_call(request_id: int, tool_name: str, arguments: Dict[str,
     try:
         tool = tools[tool_name]
         
-        # Clean arguments and set defaults
+        # Clean and validate arguments based on tool type
         if hasattr(tool, 'args_schema'):
             schema = tool.args_schema.model_json_schema()
-            clean_args = {k: v for k, v in arguments.items() if v is not None}
             
-            # Set default values
-            for prop, details in schema.get('properties', {}).items():
-                if prop not in clean_args:
-                    if details.get('type') == 'array':
-                        clean_args[prop] = ['markdown'] if prop == 'formats' else []
-                    elif details.get('type') == 'boolean':
-                        clean_args[prop] = False
-                    elif details.get('type') == 'integer':
-                        clean_args[prop] = 30000 if prop == 'timeout' else 0
-            
-            arguments = clean_args
+            if tool_name == 'microsoft_createandsendemail':
+                arguments = await _clean_microsoft_createandsendemail_args(arguments, schema, request_id, correlation_id)
+                if isinstance(arguments, JSONResponse):  # If error response
+                    return arguments
+            elif tool_name == 'scrapeurl':
+                arguments = _clean_scrape_args(arguments, schema)
+            else:
+                arguments = _clean_default_args(arguments, schema)
+        
+        tools_logger.info(f"[{correlation_id}] Final cleaned arguments for tool '{tool_name}': {json.dumps(arguments, indent=2)}")
         
         result = await tool.arun(arguments)
         execution_time = time.time() - start_time
@@ -71,17 +71,16 @@ async def handle_tool_call(request_id: int, tool_name: str, arguments: Dict[str,
         )
         
         # Format result
-        markdown_content = (
-            "" if result is None
-            else result if isinstance(result, str)
-            else result["markdown"] if isinstance(result, dict) and "markdown" in result
-            else str(result)
-        )
+        if isinstance(result, dict) and "markdown" in result:
+            markdown_content = result["markdown"]
+        elif isinstance(result, str):
+            markdown_content = result
+        else:
+            markdown_content = str(result) if result is not None else ""
         
         return create_success_response(request_id, {
             "content": [{"type": "text", "text": markdown_content}]
         })
-        
     except Exception as e:
         tools_logger.error(f"[{correlation_id}] Error executing tool '{tool_name}': {str(e)}")
         return create_error_response(request_id, MCPErrorCode.INTERNAL_ERROR, str(e))

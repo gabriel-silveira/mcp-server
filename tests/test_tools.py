@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from pydantic import BaseModel
-from src.tools import handle_tool_call, ToolCallParams, tools
+from src.tools.base import handle_tool_call, ToolCallParams, tools
 from src.schemas.mcp_schemas import MCPErrorCode
 
 class MockArgsSchema(BaseModel):
@@ -29,7 +29,7 @@ class MockTool:
 def mock_tools(monkeypatch):
     tools_dict = {}
     tools_dict["scrapeurl"] = MockTool("scrapeurl")
-    monkeypatch.setattr("src.tools.tools", tools_dict)
+    monkeypatch.setattr("src.tools.base.tools", tools_dict)
     return tools_dict
 
 @pytest.mark.asyncio
@@ -53,7 +53,7 @@ async def test_handle_scrapeurl_tool_with_none_result(mock_tools, monkeypatch):
     tool = MockTool("scrapeurl")
     tool.arun = mock_arun
     tools_dict["scrapeurl"] = tool
-    monkeypatch.setattr("src.tools.tools", tools_dict)
+    monkeypatch.setattr("src.tools.base.tools", tools_dict)
     
     result = await handle_tool_call(1, "scrapeurl", {"url": "https://example.com"})
     data = result.body.decode()
@@ -72,7 +72,7 @@ async def test_handle_scrapeurl_tool_with_string_result(mock_tools, monkeypatch)
     tool = MockTool("scrapeurl")
     tool.arun = mock_arun
     tools_dict["scrapeurl"] = tool
-    monkeypatch.setattr("src.tools.tools", tools_dict)
+    monkeypatch.setattr("src.tools.base.tools", tools_dict)
     
     result = await handle_tool_call(1, "scrapeurl", {"url": "https://example.com"})
     data = result.body.decode()
@@ -91,7 +91,7 @@ async def test_handle_scrapeurl_tool_with_dict_result(mock_tools, monkeypatch):
     tool = MockTool("scrapeurl")
     tool.arun = mock_arun
     tools_dict["scrapeurl"] = tool
-    monkeypatch.setattr("src.tools.tools", tools_dict)
+    monkeypatch.setattr("src.tools.base.tools", tools_dict)
     
     result = await handle_tool_call(1, "scrapeurl", {"url": "https://example.com"})
     data = result.body.decode()
