@@ -1,4 +1,3 @@
-import uvicorn
 from fastapi import FastAPI
 from src.routes.auth_routes import auth_router
 from src.routes.mcp_routes import mcp_router

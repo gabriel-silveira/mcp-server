@@ -45,7 +45,7 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     auth_logger.info(f"Login bem-sucedido para usuário: {form_data.username} | IP: {request.client.host if request else 'desconhecido'}")
     return {"access_token": access_token, "token_type": "bearer"}
 
-@auth_router.post("/token_exchange", response_model=Token)
+@auth_router.post("/oauth/token", response_model=Token)
 async def token_exchange(credentials: UserCredentials, request: Request = None):
     auth_logger.info(f"Solicitação de troca de token recebida | IP: {request.client.host if request else 'desconhecido'} | Client ID: {credentials.client_id}")
     """
