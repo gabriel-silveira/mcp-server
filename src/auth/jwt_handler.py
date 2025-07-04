@@ -7,7 +7,8 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 # Importa as configurações do JWT
 from src.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, AUTH_REQUIRED
 
-security = HTTPBearer()
+# Configurando HTTPBearer com auto_error=False para não gerar erro automaticamente
+security = HTTPBearer(auto_error=False)
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """
@@ -29,25 +30,26 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+def verify_token(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
     """
-    Verifica se o token JWT é válido
+    Verifica se o token JWT é válido ou permite acesso quando AUTH_REQUIRED=False
     """
+    # Bypass de autenticação quando não é obrigatória
+    if not AUTH_REQUIRED:
+        return {}
+    
+    # Quando a autenticação é obrigatória mas não há credenciais
+    # Com auto_error=False, credentials será None quando não houver token
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token não fornecido",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
     try:
-        # Extrai o token do cabeçalho de autorização
-        token = credentials.credentials
-        
-        # Decodifica e verifica o token
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        
-        # O PyJWT já verifica a expiração automaticamente durante o decode
-        # Não precisamos verificar manualmente, mas podemos adicionar logs
-        exp_time = datetime.fromtimestamp(payload.get("exp"))
-        now = datetime.utcnow()
-        
-        from ..logs import auth_logger
-        auth_logger.debug(f"Token válido. Expira em {exp_time.isoformat()}, agora é {now.isoformat()}, tempo restante: {(exp_time - now).total_seconds()} segundos")
-        
+        # Validação do token
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
     except jwt.PyJWTError:
         raise HTTPException(

@@ -6,6 +6,8 @@ import time
 from pydantic import BaseModel
 from uuid import uuid4
 
+from src.services.oauth_service import get_microsoft_auth_url
+
 from src.utils import create_error_response, create_success_response, MCPErrorCode
 from src.logs import tools_logger
 from src.config import ARCADE_API_KEY
@@ -33,6 +35,40 @@ for tool in raw_tools:
     if isinstance(tool.name, str):
         name = tool.name.lower().replace('web_', '')
         tools[name] = tool
+
+def _create_auth_response(request_id: int, tool_name: str) -> JSONResponse:
+    """Create authentication response for tools requiring Microsoft authentication."""
+    auth_response = get_microsoft_auth_url()
+    return JSONResponse(
+        content={
+            "error": {
+                "code": -32003,
+                "data": {
+                    "id": f"ar_{uuid4().hex[:24]}",
+                    "type": "url",
+                    "url": auth_response["url"],
+                    "message": {
+                        "text": "Authorization is required. Please click the link to authorize."
+                    }
+                },
+                "message": "interaction_required"
+            },
+            "id": request_id,
+            "jsonrpc": "2.0"
+        },
+        status_code=200
+    )
+
+
+def _format_result(result: Any) -> str:
+    """Format tool execution result to markdown content."""
+    if isinstance(result, dict) and "markdown" in result:
+        return result["markdown"]
+    elif isinstance(result, str):
+        return result
+    else:
+        return str(result) if result is not None else ""
+
 
 async def handle_tool_call(request_id: int, tool_name: str, arguments: Dict[str, Any]) -> JSONResponse:
     """Handle tool execution requests"""
@@ -70,17 +106,17 @@ async def handle_tool_call(request_id: int, tool_name: str, arguments: Dict[str,
             f"{json.dumps(result, indent=2) if result else 'None'}"
         )
         
-        # Format result
-        if isinstance(result, dict) and "markdown" in result:
-            markdown_content = result["markdown"]
-        elif isinstance(result, str):
-            markdown_content = result
-        else:
-            markdown_content = str(result) if result is not None else ""
-        
+        # Format result and return success response
+        markdown_content = _format_result(result)
         return create_success_response(request_id, {
             "content": [{"type": "text", "text": markdown_content}]
         })
     except Exception as e:
         tools_logger.error(f"[{correlation_id}] Error executing tool '{tool_name}': {str(e)}")
+        
+        # Handle authentication errors
+        error_str = str(e)
+        if 'Interrupt' in error_str and 'user_id is required' in error_str:
+            return _create_auth_response(request_id, tool_name)
+            
         return create_error_response(request_id, MCPErrorCode.INTERNAL_ERROR, str(e))
