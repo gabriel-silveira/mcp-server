@@ -1,14 +1,23 @@
 """Tests for the ScrapeUrl tool."""
 import pytest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from src.tools.base import handle_tool_call
 from src.schemas.mcp_schemas import MCPErrorCode
 from tests.conftest import MockTool
 
 @pytest.fixture(autouse=True)
 def mock_tools(mock_tool, monkeypatch):
-    """Mock the tools dictionary for testing."""
-    monkeypatch.setattr("src.tools.base.tools", {"scrapeurl": mock_tool()})
+    """Mock the find_tool_by_name function and manager for testing."""
+    tool = mock_tool()
+    def mock_find_tool_by_name(name):
+        return tool if name.lower() == "scrapeurl" else None
+    
+    # Mock the manager object
+    mock_manager = MagicMock()
+    mock_manager.requires_auth.return_value = False
+    
+    monkeypatch.setattr("src.tools.base.find_tool_by_name", mock_find_tool_by_name)
+    monkeypatch.setattr("src.tools.base.manager", mock_manager)
 
 @pytest.mark.asyncio
 async def test_handle_scrapeurl_tool_success(mock_tools):
@@ -24,7 +33,7 @@ async def test_handle_scrapeurl_tool_success(mock_tools):
 @pytest.mark.asyncio
 async def test_handle_scrapeurl_tool_not_found():
     """Test tool not found error."""
-    with patch("src.tools.base.tools", {}):
+    with patch("src.tools.base.find_tool_by_name", return_value=None):
         result = await handle_tool_call(1, "nonexistent", {})
         data = result.body.decode()
         
@@ -36,7 +45,16 @@ async def test_handle_scrapeurl_tool_not_found():
 @pytest.mark.asyncio
 async def test_handle_scrapeurl_tool_failure(mock_tools, monkeypatch):
     """Test tool execution failure."""
-    monkeypatch.setattr("src.tools.base.tools", {"scrapeurl": MockTool("scrapeurl", should_fail=True)})
+    failing_tool = MockTool("scrapeurl", should_fail=True)
+    def mock_find_tool_by_name(name):
+        return failing_tool if name.lower() == "scrapeurl" else None
+    
+    # Mock the manager object
+    mock_manager = MagicMock()
+    mock_manager.requires_auth.return_value = False
+    
+    monkeypatch.setattr("src.tools.base.find_tool_by_name", mock_find_tool_by_name)
+    monkeypatch.setattr("src.tools.base.manager", mock_manager)
     result = await handle_tool_call(1, "scrapeurl", {"url": "https://example.com"})
     data = result.body.decode()
     

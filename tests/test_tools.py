@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from pydantic import BaseModel
-from src.tools.base import handle_tool_call, ToolCallParams, tools
+from src.tools.base import handle_tool_call, ToolCallParams, find_tool_by_name
 from src.schemas.mcp_schemas import MCPErrorCode
 
 class MockArgsSchema(BaseModel):
@@ -29,7 +29,17 @@ class MockTool:
 def mock_tools(monkeypatch):
     tools_dict = {}
     tools_dict["scrapeurl"] = MockTool("scrapeurl")
-    monkeypatch.setattr("src.tools.base.tools", tools_dict)
+    
+    # Mock the find_tool_by_name function
+    def mock_find_tool_by_name(name):
+        return tools_dict.get(name.lower())
+    
+    # Mock the manager.requires_auth method
+    mock_manager = MagicMock()
+    mock_manager.requires_auth.return_value = False
+    
+    monkeypatch.setattr("src.tools.base.find_tool_by_name", mock_find_tool_by_name)
+    monkeypatch.setattr("src.tools.base.manager", mock_manager)
     return tools_dict
 
 @pytest.mark.asyncio
@@ -53,7 +63,17 @@ async def test_handle_scrapeurl_tool_with_none_result(mock_tools, monkeypatch):
     tool = MockTool("scrapeurl")
     tool.arun = mock_arun
     tools_dict["scrapeurl"] = tool
-    monkeypatch.setattr("src.tools.base.tools", tools_dict)
+    
+    # Mock the find_tool_by_name function
+    def mock_find_tool_by_name(name):
+        return tools_dict.get(name.lower())
+    
+    # Mock the manager object
+    mock_manager = MagicMock()
+    mock_manager.requires_auth.return_value = False
+    
+    monkeypatch.setattr("src.tools.base.find_tool_by_name", mock_find_tool_by_name)
+    monkeypatch.setattr("src.tools.base.manager", mock_manager)
     
     result = await handle_tool_call(1, "scrapeurl", {"url": "https://example.com"})
     data = result.body.decode()
@@ -72,7 +92,17 @@ async def test_handle_scrapeurl_tool_with_string_result(mock_tools, monkeypatch)
     tool = MockTool("scrapeurl")
     tool.arun = mock_arun
     tools_dict["scrapeurl"] = tool
-    monkeypatch.setattr("src.tools.base.tools", tools_dict)
+    
+    # Mock the find_tool_by_name function
+    def mock_find_tool_by_name(name):
+        return tools_dict.get(name.lower())
+    
+    # Mock the manager object
+    mock_manager = MagicMock()
+    mock_manager.requires_auth.return_value = False
+    
+    monkeypatch.setattr("src.tools.base.find_tool_by_name", mock_find_tool_by_name)
+    monkeypatch.setattr("src.tools.base.manager", mock_manager)
     
     result = await handle_tool_call(1, "scrapeurl", {"url": "https://example.com"})
     data = result.body.decode()
@@ -91,7 +121,17 @@ async def test_handle_scrapeurl_tool_with_dict_result(mock_tools, monkeypatch):
     tool = MockTool("scrapeurl")
     tool.arun = mock_arun
     tools_dict["scrapeurl"] = tool
-    monkeypatch.setattr("src.tools.base.tools", tools_dict)
+    
+    # Mock the find_tool_by_name function
+    def mock_find_tool_by_name(name):
+        return tools_dict.get(name.lower())
+    
+    # Mock the manager object
+    mock_manager = MagicMock()
+    mock_manager.requires_auth.return_value = False
+    
+    monkeypatch.setattr("src.tools.base.find_tool_by_name", mock_find_tool_by_name)
+    monkeypatch.setattr("src.tools.base.manager", mock_manager)
     
     result = await handle_tool_call(1, "scrapeurl", {"url": "https://example.com"})
     data = result.body.decode()
