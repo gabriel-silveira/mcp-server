@@ -8,11 +8,18 @@ from urllib.parse import quote
 
 # Configurações dos provedores OAuth
 OAUTH_PROVIDERS = {
+    "google": {
+        "auth_url": "https://accounts.google.com/o/oauth2/auth",
+        "token_url": "https://oauth2.googleapis.com/token",
+        "client_id": "616965216235-j00hdhfapqu1kgkkdm3btghldkjmcior.apps.googleusercontent.com",
+        "redirect_uri": "http://localhost:2906/oauth/callback",
+        "scopes": ["https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile"],
+    },
     "microsoft": {
         "auth_url": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
         "token_url": "https://login.microsoftonline.com/common/oauth2/v2.0/token",
         "client_id": "e079991b-92b0-4f3f-8238-d2d6b7155a59",
-        "redirect_uri": "https://cloud.arcade.dev/api/v1/oauth/callback",
+        "redirect_uri": "http://localhost:2906/oauth/callback",
         "scopes": ["offline_access", "Mail.Send"],
         # Este valor deve ser gerado dinamicamente para cada solicitação
         "code_challenge": "Ts60Nq-COBuxYIDFBCzff6q2H42i2jSj6Dznm9yFiPA",
@@ -86,6 +93,18 @@ def get_auth_url(
         "state": state,
         "provider": provider
     }
+
+def get_google_auth_url(additional_scopes: Optional[list] = None) -> Dict[str, str]:
+    """
+    Gera uma URL de autenticação OAuth específica para Google.
+    
+    Args:
+        additional_scopes: Escopos adicionais a serem solicitados além dos padrão
+        
+    Returns:
+        Dict contendo URL de autenticação e state
+    """
+    return get_auth_url("google", additional_scopes)
 
 def get_microsoft_auth_url(additional_scopes: Optional[list] = None) -> Dict[str, str]:
     """

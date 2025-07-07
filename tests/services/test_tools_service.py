@@ -40,6 +40,7 @@ def test_get_tools_list_response():
     """Test tools list response"""
     request_id = 789
     mock_tool = MagicMock()
+    mock_tool.name = "test_tool"
     mock_tool.description = "Test tool"
     mock_tool.args_schema.model_json_schema.return_value = {
         "type": "object",
@@ -47,7 +48,7 @@ def test_get_tools_list_response():
         "required": ["url"]
     }
     
-    with patch("src.services.tools_service.tools", {"test_tool": mock_tool}):
+    with patch("src.services.tools_service.raw_tools", [mock_tool]):
         response = tools_service.get_tools_list_response(request_id)
     
     assert response["id"] == request_id
@@ -65,11 +66,12 @@ def test_get_tools_list_response_no_schema():
     """Test tools list response with tool without schema"""
     request_id = 789
     mock_tool = MagicMock()
+    mock_tool.name = "test_tool"
     mock_tool.description = "Test tool"
     # Remove args_schema attribute
     del mock_tool.args_schema
     
-    with patch("src.services.tools_service.tools", {"test_tool": mock_tool}):
+    with patch("src.services.tools_service.raw_tools", [mock_tool]):
         response = tools_service.get_tools_list_response(request_id)
     
     assert response["id"] == request_id

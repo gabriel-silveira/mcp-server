@@ -1,5 +1,5 @@
 from src.utils import create_error_response
-from src.tools.base import handle_tool_call, tools, ToolCallParams
+from src.tools.base import handle_tool_call, raw_tools, ToolCallParams
 from src.logs import tools_logger
 from src.schemas.mcp_schemas import MCPErrorCode
 from src.config import server_name, server_version
@@ -63,7 +63,7 @@ def get_tools_list_response(request_id: int):
         "result": {
             "tools": [
                 {
-                    "name": tool_name,
+                    "name": tool.name,
                     "description": tool.description,
                     "inputSchema": tool.args_schema.model_json_schema() if hasattr(tool, 'args_schema') else {
                         "type": "object",
@@ -71,7 +71,7 @@ def get_tools_list_response(request_id: int):
                         "required": []
                     }
                 }
-                for tool_name, tool in tools.items()
+                for tool in raw_tools
             ]
         }
     }

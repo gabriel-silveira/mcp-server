@@ -1,11 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from datetime import timedelta
-import os
 import jwt
 import json
 
-from ..auth.jwt_handler import create_access_token, verify_token, ACCESS_TOKEN_EXPIRE_MINUTES
+from ..auth.jwt_handler import create_access_token, ACCESS_TOKEN_EXPIRE_MINUTES
 from ..schemas.auth_schemas import Token, UserCredentials
 from ..logs import auth_logger
 
@@ -189,3 +188,11 @@ async def token_exchange(request: Request = None):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erro inesperado: {str(e)}",
         )
+
+@auth_router.get("/oauth/callback")
+async def oauth_callback(request: Request = None):
+    """
+    Endpoint para receber a callback do OAuth
+    """
+    return f"Callback received {request.query_params}"
+    
