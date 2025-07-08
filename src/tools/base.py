@@ -25,8 +25,22 @@ manager = ToolManager(
 
 # Initialize tools
 raw_tools = manager.init_tools(
-    tools=["Web.ScrapeUrl"],
-    toolkits=["Google"],
+    toolkits=[
+        "Web",
+        "Search",
+        "Google",
+        "Microsoft",
+        "Github",
+        "Slack",
+        "Linkedin",
+        "X",
+        "Confluence",
+        "Jira",
+        "Trello",
+        "Notion",
+        "Dropbox",
+        "Reddit",
+    ],
 )
 
 # Função auxiliar para encontrar uma ferramenta pelo nome
