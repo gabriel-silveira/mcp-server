@@ -40,6 +40,8 @@ async def handle_mcp_request(request: Request, token_data: Optional[dict] = Depe
         return JSONResponse(content=tools_service.get_tools_list_response(request_id))
     
     elif method == "tools/call":
+        mcp_logger.info(f"Received tool call request - - - - - - - - - - \nRequest body: {mcp_request}\n")
+
         return await tools_service.handle_tool_request(request_id, mcp_request.params)
     
     return create_error_response(
