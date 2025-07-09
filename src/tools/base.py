@@ -19,12 +19,12 @@ class ToolCallParams(BaseModel):
     arguments: Dict[str, Any]
 
 # Initialize tool manager
-manager = ToolManager(
+tools_manager = ToolManager(
     api_key=ARCADE_API_KEY,
 )
 
 # Initialize tools
-raw_tools = manager.init_tools(
+raw_tools = tools_manager.init_tools(
     toolkits=[
         "Web",
         "Search",
@@ -101,6 +101,29 @@ async def handle_tool_call(request_id: int, tool_name: str, arguments: Dict[str,
     tools_logger.info(f"Tool found: {tool}")
 
     try:
+        if tools_manager.requires_auth(tool_name):
+            tools_logger.info(f"Auth required for tool: {tool_name}")
+
+            auth_response = tools_manager.authorize(tool_name, "user_123")
+
+            tools_logger.info(f"Auth response: {auth_response}")
+
+            tools_logger.info(f"Auth status: {auth_response.status}")
+        
+            if auth_response.status != "completed":
+                # Solicite ao usuário que visite a URL para autorização
+                # tools_logger.info(f"Visit the following URL to authorize: {auth_response.url}")
+
+                # Aguarde o usuário concluir a autorização
+                # e depois verifique o status da autorização novamente
+                # tools_manager.wait_for_auth(auth_response.id)
+
+                #if not tools_manager.is_authorized(auth_response.id):
+                    # Interrompe a execução se a autorização falhar
+                #    raise ValueError("Authorization failed")
+
+                return _create_auth_response(request_id, tool_name, auth_response.url)
+
         # Clean and validate arguments based on tool type
         if hasattr(tool, 'args_schema'):
             schema = tool.args_schema.model_json_schema()
@@ -117,14 +140,6 @@ async def handle_tool_call(request_id: int, tool_name: str, arguments: Dict[str,
                 arguments = _clean_default_args(arguments, schema)
         
         tools_logger.info(f"[{correlation_id}] Final cleaned arguments for tool '{tool_name}': {json.dumps(arguments, indent=2)}")
-        
-        if manager.requires_auth(tool_name):
-            auth_response = manager.authorize(tool_name, "user_123")
-        
-            if auth_response.status != "completed":
-                # Solicite ao usuário que visite a URL para autorização
-                tools_logger.info(f"Visit the following URL to authorize: {auth_response.url}")
-                return _create_auth_response(request_id, tool_name, auth_response.url)
 
         result = await tool.arun(arguments)
         execution_time = time.time() - start_time
