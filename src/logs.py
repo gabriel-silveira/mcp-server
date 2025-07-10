@@ -8,3 +8,4 @@ logging.basicConfig(
 mcp_logger = logging.getLogger('mcp_server')
 auth_logger = logging.getLogger('auth')
 tools_logger = logging.getLogger('tools')
+agent_logger = logging.getLogger('agent')

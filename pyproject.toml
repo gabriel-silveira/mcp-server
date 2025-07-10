@@ -13,6 +13,7 @@ dependencies = [
     "gunicorn==21.2.0",
     "pyjwt>=2.10.1",
     "python-multipart>=0.0.20",
+    "langchain-openai>=0.3.27",
 ]
 
 [project.optional-dependencies]

@@ -1,25 +1,28 @@
 from fastapi.responses import JSONResponse
 from langchain_arcade import ToolManager
 from typing import Dict, Any
-import json
-import time
 from pydantic import BaseModel
 from uuid import uuid4
+import json, time
 
 from src.utils import create_error_response, create_success_response, MCPErrorCode
 from src.logs import tools_logger
 from src.config import ARCADE_API_KEY
-from src.tools.tools_args import _clean_microsoft_createandsendemail_args, _clean_scrape_args, _clean_default_args
+from src.tools.tools_args import _clean_arguments
+from src.agent.graph import get_graph_with_tool
+
 
 # Request/Response models
 class ToolCallParams(BaseModel):
     name: str
     arguments: Dict[str, Any]
 
+
 # Initialize tool manager
 tools_manager = ToolManager(
     api_key=ARCADE_API_KEY,
 )
+
 
 # Initialize tools
 raw_tools = tools_manager.init_tools(
@@ -41,6 +44,7 @@ raw_tools = tools_manager.init_tools(
     ],
 )
 
+
 # Função auxiliar para encontrar uma ferramenta pelo nome
 def find_tool_by_name(name: str):
     """Find a tool by its name in raw_tools."""
@@ -48,6 +52,7 @@ def find_tool_by_name(name: str):
         if tool.name == name:
             return tool
     return None
+
 
 def _create_auth_response(request_id: int, tool_name: str, url: str) -> JSONResponse:
     """Create authentication response for tools requiring authentication."""
@@ -87,12 +92,13 @@ def _format_result(result: Any) -> str:
 
 async def handle_tool_call(request_id: int, tool_name: str, arguments: Dict[str, Any]) -> JSONResponse:
     """Handle tool execution requests"""
-    correlation_id = str(uuid4())
+    thread_id = str(uuid4())
     start_time = time.time()
-    # TODO: should be related to the user
+
+    # TODO: the user_id should be related to the logged user...
     user_id = "gabrielsilveira.web@gmail.com"
     
-    tools_logger.info(f"[{correlation_id}] Tool '{tool_name}' called with arguments: {json.dumps(arguments, indent=2)}")
+    tools_logger.info(f"[{thread_id}] Tool '{tool_name}' called with arguments: {json.dumps(arguments, indent=2)}")
 
     tool = find_tool_by_name(tool_name)
     if not tool:
@@ -100,70 +106,69 @@ async def handle_tool_call(request_id: int, tool_name: str, arguments: Dict[str,
 
     tools_logger.info(f"Tool found: {tool}")
 
+    cleaned_arguments = await _clean_arguments(tool, arguments, tool_name, request_id, thread_id)
+
+    tools_logger.info(f"[{thread_id}] Cleaned arguments for tool '{tool_name}': {json.dumps(cleaned_arguments, indent=2)}")
+
     try:
+        # Verifica se a ferramenta requer autorização
         if tools_manager.requires_auth(tool_name):
             tools_logger.info(f"Auth required for tool: {tool_name}")
 
             auth_response = tools_manager.authorize(tool_name, user_id)
 
-            tools_logger.info(f"Auth response: {auth_response}")
-
-            tools_logger.info(f"Auth status: {auth_response.status}")
-
             tools_logger.info(f"Auth response ID: {auth_response.id}")
+            tools_logger.info(f"Auth response Status: {auth_response.status}")
+            tools_logger.info(f"Auth response: {auth_response}")
         
             if auth_response.status != "completed":
-                # Solicite ao usuário que visite a URL para autorização
-                # tools_logger.info(f"Visit the following URL to authorize: {auth_response.url}")
-
-                # Aguarde o usuário concluir a autorização
-                # e depois verifique o status da autorização novamente
-                # tools_manager.wait_for_auth(auth_response.id)
-
-                #if not tools_manager.is_authorized(auth_response.id):
-                    # Interrompe a execução se a autorização falhar
-                #    raise ValueError("Authorization failed")
-
                 return _create_auth_response(request_id, tool_name, auth_response.url)
 
-        # Clean and validate arguments based on tool type
-        if hasattr(tool, 'args_schema'):
-            schema = tool.args_schema.model_json_schema()
+            # executa a ferramenta (autorizada)
+            graph_with_tool = get_graph_with_tool(tool_name)
+
+            # Define as mensagens com o input do usuário
+            inputs = {
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": f"Execute a ferramenta {tool_name} com os seguintes argumentos: {str(cleaned_arguments)}",
+                    }
+                ],
+            }
+
+            tools_logger.info(f"Messages: {inputs}")
             
-            # Nota: Aqui ainda estamos usando os nomes antigos para compatibilidade com as funções de limpeza
-            # Se necessário, você pode atualizar essas condições para usar os nomes originais
-            if tool_name == 'microsoft_createandsendemail':
-                arguments = await _clean_microsoft_createandsendemail_args(arguments, schema, request_id, correlation_id)
-                if isinstance(arguments, JSONResponse):  # If error response
-                    return arguments
-            elif tool_name == 'Web_ScrapeUrl':
-                arguments = _clean_scrape_args(arguments, schema)
-            else:
-                arguments = _clean_default_args(arguments, schema)
-        
-        tools_logger.info(f"[{correlation_id}] Final cleaned arguments for tool '{tool_name}': {json.dumps(arguments, indent=2)}")
+            # Configuração com IDs de encadeamento e usuário para fins de autorização
+            config = {"configurable": {"thread_id": thread_id, "user_id": user_id}}
+            
+            # Executa o grafo e transmite as saídas.
+            for chunk in graph_with_tool.stream(inputs, config=config, stream_mode="values"):
+                tools_logger.info(f"Messages: {chunk}")
+                # Pretty-print da última mensagem no chunk
+                # chunk["messages"][-1].pretty_print()
 
-        result = await tool.arun(arguments)
-        execution_time = time.time() - start_time
+            return create_success_response(request_id, {
+                "content": [{"type": "text", "text": ""}]
+            })
+        else:
+            # Executa a ferramenta (sem autorização)
+            result = await tool.arun(cleaned_arguments)
 
-        tools_logger.info(f"Tool result: {result}")
-        
-        tools_logger.info(
-            f"[{correlation_id}] Tool '{tool_name}' completed in {execution_time:.2f}s with result: "
-            f"{json.dumps(result, indent=2) if result else 'None'}"
-        )
-        
-        # Format result and return success response
-        markdown_content = _format_result(result)
-        return create_success_response(request_id, {
-            "content": [{"type": "text", "text": markdown_content}]
-        })
+            tools_logger.info(f"Tool result: {result}")
+            
+            tools_logger.info(
+                f"[{thread_id}] Tool '{tool_name}' completed in {time.time() - start_time:.2f}s with result: "
+                f"{json.dumps(result, indent=2) if result else 'None'}"
+            )
+            
+            # Formata o resultado e retorna a resposta de sucesso
+            markdown_content = _format_result(result)
+
+            return create_success_response(request_id, {
+                "content": [{"type": "text", "text": markdown_content}]
+            })
     except Exception as e:
-        tools_logger.error(f"[{correlation_id}] Error executing tool '{tool_name}': {str(e)}")
-        
-        # Handle authentication errors
-        #error_str = str(e)
-        #if 'Interrupt' in error_str and 'user_id is required' in error_str:
-        #    return _create_auth_response(request_id, tool_name)
+        tools_logger.error(f"[{thread_id}] Error executing tool '{tool_name}': {str(e)}")
             
         return create_error_response(request_id, MCPErrorCode.INTERNAL_ERROR, str(e))

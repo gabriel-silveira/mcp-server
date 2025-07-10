@@ -60,3 +60,22 @@ def _clean_default_args(arguments: Dict[str, Any], schema: Dict[str, Any]) -> Di
                 clean_args[prop] = 0
     
     return clean_args
+
+
+async def _clean_arguments(tool, arguments: Dict[str, Any], tool_name: str, request_id: int, correlation_id: str):
+    # Clean and validate arguments based on tool type
+    if hasattr(tool, 'args_schema'):
+        schema = tool.args_schema.model_json_schema()
+        
+        # Nota: Aqui ainda estamos usando os nomes antigos para compatibilidade com as funções de limpeza
+        # Se necessário, você pode atualizar essas condições para usar os nomes originais
+        if tool_name == 'microsoft_createandsendemail':
+            arguments = await _clean_microsoft_createandsendemail_args(arguments, schema, request_id, correlation_id)
+            if isinstance(arguments, JSONResponse):  # If error response
+                return arguments
+        elif tool_name == 'Web_ScrapeUrl':
+            arguments = _clean_scrape_args(arguments, schema)
+        else:
+            arguments = _clean_default_args(arguments, schema)
+
+        return arguments
