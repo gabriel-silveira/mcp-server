@@ -6,8 +6,6 @@ import time
 from pydantic import BaseModel
 from uuid import uuid4
 
-from src.services.oauth_service import get_microsoft_auth_url, get_google_auth_url
-
 from src.utils import create_error_response, create_success_response, MCPErrorCode
 from src.logs import tools_logger
 from src.config import ARCADE_API_KEY
@@ -91,6 +89,8 @@ async def handle_tool_call(request_id: int, tool_name: str, arguments: Dict[str,
     """Handle tool execution requests"""
     correlation_id = str(uuid4())
     start_time = time.time()
+    # TODO: should be related to the user
+    user_id = "gabrielsilveira.web@gmail.com"
     
     tools_logger.info(f"[{correlation_id}] Tool '{tool_name}' called with arguments: {json.dumps(arguments, indent=2)}")
 
@@ -104,11 +104,13 @@ async def handle_tool_call(request_id: int, tool_name: str, arguments: Dict[str,
         if tools_manager.requires_auth(tool_name):
             tools_logger.info(f"Auth required for tool: {tool_name}")
 
-            auth_response = tools_manager.authorize(tool_name, "user_123")
+            auth_response = tools_manager.authorize(tool_name, user_id)
 
             tools_logger.info(f"Auth response: {auth_response}")
 
             tools_logger.info(f"Auth status: {auth_response.status}")
+
+            tools_logger.info(f"Auth response ID: {auth_response.id}")
         
             if auth_response.status != "completed":
                 # Solicite ao usuário que visite a URL para autorização
