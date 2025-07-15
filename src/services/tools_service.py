@@ -44,6 +44,14 @@ def get_initialize_response(request_id: int):
         }
     }
 
+def get_cancellation_response(request_id: int):
+    """Get cancellation response"""
+    return {
+        "id": request_id,
+        "jsonrpc": "2.0",
+        "result": None
+    }
+
 def get_initialized_notification_response(request_id: int):
     """Get initialized notification response"""
     return {

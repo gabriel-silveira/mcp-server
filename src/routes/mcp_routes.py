@@ -36,6 +36,12 @@ async def handle_mcp_request(request: Request, token_data: Optional[dict] = Depe
             status_code=202
         )
     
+    elif method == "notifications/cancelled":
+        return JSONResponse(
+            content=tools_service.get_cancellation_response(request_id),
+            status_code=200
+        )
+    
     elif method == "tools/list":
         return JSONResponse(content=tools_service.get_tools_list_response(request_id))
     

@@ -9,6 +9,7 @@ from src.utils import create_error_response, create_success_response, MCPErrorCo
 from src.logs import tools_logger
 from src.config import ARCADE_API_KEY
 from src.tools.tools_args import _clean_arguments
+from src.tools.youtube_tools import Youtube_BlogPost
 from src.agent.graph import get_graph_with_tool
 
 
@@ -43,6 +44,8 @@ raw_tools = tools_manager.init_tools(
         "Reddit",
     ],
 )
+
+raw_tools.append(Youtube_BlogPost)
 
 
 # Função auxiliar para encontrar uma ferramenta pelo nome
@@ -112,14 +115,14 @@ async def handle_tool_call(request_id: int, tool_name: str, arguments: Dict[str,
 
     try:
         # Verifica se a ferramenta requer autorização
-        if tools_manager.requires_auth(tool_name):
-            tools_logger.info(f"Auth required for tool: {tool_name}")
+        if tool_name != "Youtube_BlogPost" and tools_manager.requires_auth(tool_name):
+            tools_logger.info(f"Auth is required for tool: {tool_name}")
 
             auth_response = tools_manager.authorize(tool_name, user_id)
 
             tools_logger.info(f"Auth response ID: {auth_response.id}")
             tools_logger.info(f"Auth response Status: {auth_response.status}")
-            tools_logger.info(f"Auth response: {auth_response}")
+            tools_logger.info(f"Complete auth response: {auth_response}")
         
             if auth_response.status != "completed":
                 return _create_auth_response(request_id, tool_name, auth_response.url)
@@ -137,19 +140,17 @@ async def handle_tool_call(request_id: int, tool_name: str, arguments: Dict[str,
                 ],
             }
 
-            tools_logger.info(f"Messages: {inputs}")
+            tools_logger.info(f"Message: {inputs}")
             
             # Configuração com IDs de encadeamento e usuário para fins de autorização
             config = {"configurable": {"thread_id": thread_id, "user_id": user_id}}
             
             # Executa o grafo e transmite as saídas.
             for chunk in graph_with_tool.stream(inputs, config=config, stream_mode="values"):
-                tools_logger.info(f"Messages: {chunk}")
-                # Pretty-print da última mensagem no chunk
-                # chunk["messages"][-1].pretty_print()
+                tools_logger.info(f"Chunk: {chunk}")
 
             return create_success_response(request_id, {
-                "content": [{"type": "text", "text": ""}]
+                "content": [{"type": "text", "text": chunk["messages"][-1].content}]
             })
         else:
             # Executa a ferramenta (sem autorização)
@@ -170,5 +171,5 @@ async def handle_tool_call(request_id: int, tool_name: str, arguments: Dict[str,
             })
     except Exception as e:
         tools_logger.error(f"[{thread_id}] Error executing tool '{tool_name}': {str(e)}")
-            
+
         return create_error_response(request_id, MCPErrorCode.INTERNAL_ERROR, str(e))
