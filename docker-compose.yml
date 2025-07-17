@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  mcp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "2906:2906"
+    env_file:
+      - .env
+    environment:
+      # Definindo variáveis de ambiente vazias que serão preenchidas pelo arquivo .env
+      # Isso evita warnings de segurança no Dockerfile
+      - ARCADE_API_KEY
+      - OPENAI_API_KEY
+    volumes:
+      # Volume para persistência de dados (se necessário)
+      - ./db:/app/db
+      # Volume para logs
+      - ./logs:/app/logs
+      # Volume para código fonte (útil para desenvolvimento)
+      - ./src:/app/src:ro
+    restart: unless-stopped
+    # Verificação de saúde para garantir que o serviço está funcionando corretamente
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:2906/mcp || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
