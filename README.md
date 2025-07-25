@@ -63,8 +63,8 @@ git clone https://github.com/gabriel-silveira/mcp-server.git .
 ### 4.2. Configurar ambiente virtual
 
 ```bash
-python3 -m venv venv
-source venv/bin/activate
+python3 -m venv .venv
+source .venv/bin/activate
 ```
 
 ### 4.3. Instalar dependências
@@ -72,7 +72,7 @@ source venv/bin/activate
 ```bash
 pip install --upgrade pip
 pip install uv
-uv pip install -e ".[dev]"
+uv sync
 
 # Verificar se o Gunicorn foi instalado corretamente
 which gunicorn || pip install gunicorn
@@ -117,8 +117,8 @@ After=network.target
 User=root
 Group=root
 WorkingDirectory=/home/ubuntu/mcp
-Environment="PATH=/home/ubuntu/mcp/venv/bin"
-ExecStart=/home/ubuntu/mcp/venv/bin/gunicorn \
+Environment="PATH=/home/ubuntu/mcp/.venv/bin"
+ExecStart=/home/ubuntu/mcp/.venv/bin/gunicorn \
     --workers 4 \
     --worker-class uvicorn.workers.UvicornWorker \
     --bind 127.0.0.1:2906 \
