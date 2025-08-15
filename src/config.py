@@ -12,6 +12,7 @@ import os
 # API Keys
 ARCADE_API_KEY = os.getenv('ARCADE_API_KEY')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+MARIADB_URI = os.getenv('MARIADB_URI')
 
 # JWT Authentication
 SECRET_KEY = os.getenv('JWT_SECRET_KEY', "chave_secreta_muito_segura")  # Use uma chave gerada com openssl rand -hex 32
