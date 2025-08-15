@@ -9,8 +9,9 @@ from src.utils import create_error_response, create_success_response, MCPErrorCo
 from src.logs import tools_logger
 from src.config import ARCADE_API_KEY
 from src.tools.tools_args import _clean_arguments
-from src.tools.youtube_tools import Youtube_BlogPost
 from src.agent.graph import get_graph_with_tool
+from src.tools.youtube_tools import Youtube_BlogPost
+from src.tools.verx_rh_tools import VerxRH_GetDBCatalog, VerxRH_RunQuery
 
 
 # Request/Response models
@@ -46,6 +47,11 @@ raw_tools = tools_manager.init_tools(
 )
 
 raw_tools.append(Youtube_BlogPost)
+raw_tools.append(VerxRH_GetDBCatalog)
+raw_tools.append(VerxRH_RunQuery)
+
+# As ferramentas personalizadas estão em raw_tools, mas precisamos garantir
+# que sejam executadas corretamente mesmo sem estarem no tools_manager
 
 
 # Função auxiliar para encontrar uma ferramenta pelo nome
@@ -114,8 +120,11 @@ async def handle_tool_call(request_id: int, tool_name: str, arguments: Dict[str,
     tools_logger.info(f"[{thread_id}] Cleaned arguments for tool '{tool_name}': {json.dumps(cleaned_arguments, indent=2)}")
 
     try:
+        # Verifica se é uma ferramenta personalizada (adicionada manualmente a raw_tools)
+        is_custom_tool = tool_name in ["Youtube_BlogPost", "VerxRH_GetDBCatalog", "VerxRH_RunQuery"]
+        
         # Verifica se a ferramenta requer autorização
-        if tool_name != "Youtube_BlogPost" and tools_manager.requires_auth(tool_name):
+        if not is_custom_tool and tools_manager.requires_auth(tool_name):
             tools_logger.info(f"Auth is required for tool: {tool_name}")
 
             auth_response = tools_manager.authorize(tool_name, user_id)
@@ -154,7 +163,24 @@ async def handle_tool_call(request_id: int, tool_name: str, arguments: Dict[str,
             })
         else:
             # Executa a ferramenta (sem autorização)
-            result = await tool.arun(cleaned_arguments)
+            # Para ferramentas personalizadas, execute usando o método invoke conforme documentação
+            if is_custom_tool:
+                tools_logger.info(f"Executando ferramenta personalizada: {tool_name}")
+                
+                # Tratamento específico para cada ferramenta personalizada
+                if tool_name == "VerxRH_RunQuery":
+                    # VerxRH_RunQuery espera um argumento 'sql'
+                    sql = cleaned_arguments.get("sql", "")
+                    result = tool.invoke({"sql": sql})
+                elif tool_name == "VerxRH_GetDBCatalog":
+                    # VerxRH_GetDBCatalog não espera argumentos
+                    result = tool.invoke({})
+                else:
+                    # Para outras ferramentas personalizadas
+                    result = tool.invoke(cleaned_arguments)
+            else:
+                # Para ferramentas do Arcade, use o método arun
+                result = await tool.arun(cleaned_arguments)
 
             tools_logger.info(f"Tool result: {result}")
             
