@@ -25,6 +25,8 @@ tools_manager = ToolManager(
     api_key=ARCADE_API_KEY,
 )
 
+show_verx_hr_tools = False
+
 
 # Initialize tools
 raw_tools = tools_manager.init_tools(
@@ -47,8 +49,10 @@ raw_tools = tools_manager.init_tools(
 )
 
 raw_tools.append(Youtube_BlogPost)
-raw_tools.append(VerxRH_GetDBCatalog)
-raw_tools.append(VerxRH_RunQuery)
+
+if show_verx_hr_tools:
+    raw_tools.append(VerxRH_GetDBCatalog)
+    raw_tools.append(VerxRH_RunQuery)
 
 # As ferramentas personalizadas estão em raw_tools, mas precisamos garantir
 # que sejam executadas corretamente mesmo sem estarem no tools_manager
