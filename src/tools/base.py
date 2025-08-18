@@ -11,7 +11,7 @@ from src.config import ARCADE_API_KEY
 from src.tools.tools_args import _clean_arguments
 from src.agent.graph import get_graph_with_tool
 from src.tools.youtube_tools import Youtube_BlogPost
-# from src.tools.verx_rh_tools import VerxRH_GetDBCatalog, VerxRH_RunQuery
+from src.tools.verx_rh_tools import VerxRH_GetDBCatalog, VerxRH_RunQuery
 
 
 # Request/Response models
@@ -48,9 +48,8 @@ raw_tools = tools_manager.init_tools(
 
 raw_tools.append(Youtube_BlogPost)
 
-
-# raw_tools.append(VerxRH_GetDBCatalog)
-# raw_tools.append(VerxRH_RunQuery)
+raw_tools.append(VerxRH_GetDBCatalog)
+raw_tools.append(VerxRH_RunQuery)
 
 # As ferramentas personalizadas estão em raw_tools, mas precisamos garantir
 # que sejam executadas corretamente mesmo sem estarem no tools_manager
